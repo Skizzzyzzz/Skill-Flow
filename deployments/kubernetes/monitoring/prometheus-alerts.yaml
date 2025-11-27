@@ -1,0 +1,171 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-alerts
+  namespace: monitoring
+  labels:
+    app: prometheus
+data:
+  skillflow-alerts.yaml: |
+    groups:
+      - name: skillflow
+        interval: 30s
+        rules:
+          # API availability
+          - alert: SkillFlowAPIDown
+            expr: up{job="skillflow-api"} == 0
+            for: 2m
+            labels:
+              severity: critical
+            annotations:
+              summary: "SkillFlow API is down"
+              description: "SkillFlow API has been down for more than 2 minutes"
+
+          # High error rate
+          - alert: SkillFlowHighErrorRate
+            expr: |
+              sum(rate(http_requests_total{job="skillflow-api",status=~"5.."}[5m]))
+              /
+              sum(rate(http_requests_total{job="skillflow-api"}[5m]))
+              > 0.05
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High error rate in SkillFlow API"
+              description: "Error rate is above 5% for 5 minutes"
+
+          # High response time
+          - alert: SkillFlowHighResponseTime
+            expr: |
+              histogram_quantile(0.95, 
+                sum(rate(http_request_duration_seconds_bucket{job="skillflow-api"}[5m])) by (le)
+              ) > 1
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High response time in SkillFlow API"
+              description: "95th percentile response time is above 1 second"
+
+          # High CPU usage
+          - alert: SkillFlowHighCPU
+            expr: |
+              sum(rate(container_cpu_usage_seconds_total{namespace="skillflow",pod=~"skillflow-api.*"}[5m])) by (pod)
+              /
+              sum(container_spec_cpu_quota{namespace="skillflow",pod=~"skillflow-api.*"}/container_spec_cpu_period{namespace="skillflow",pod=~"skillflow-api.*"}) by (pod)
+              > 0.8
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High CPU usage in SkillFlow pod"
+              description: "CPU usage is above 80% for 10 minutes"
+
+          # High memory usage
+          - alert: SkillFlowHighMemory
+            expr: |
+              sum(container_memory_usage_bytes{namespace="skillflow",pod=~"skillflow-api.*"}) by (pod)
+              /
+              sum(container_spec_memory_limit_bytes{namespace="skillflow",pod=~"skillflow-api.*"}) by (pod)
+              > 0.85
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High memory usage in SkillFlow pod"
+              description: "Memory usage is above 85% for 10 minutes"
+
+          # Database connection issues
+          - alert: SkillFlowDatabaseConnectionFailed
+            expr: |
+              sum(rate(database_connection_errors_total{job="skillflow-api"}[5m])) > 0
+            for: 2m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Database connection errors in SkillFlow"
+              description: "Database connection errors detected"
+
+          # Redis connection issues
+          - alert: SkillFlowRedisConnectionFailed
+            expr: |
+              sum(rate(redis_connection_errors_total{job="skillflow-api"}[5m])) > 0
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Redis connection errors in SkillFlow"
+              description: "Redis connection errors detected"
+
+          # Pod restart
+          - alert: SkillFlowPodRestarting
+            expr: |
+              rate(kube_pod_container_status_restarts_total{namespace="skillflow",pod=~"skillflow-api.*"}[15m]) > 0
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "SkillFlow pod is restarting"
+              description: "Pod {{ $labels.pod }} is restarting frequently"
+
+      - name: database
+        interval: 30s
+        rules:
+          # PostgreSQL down
+          - alert: PostgreSQLDown
+            expr: up{job="postgres"} == 0
+            for: 2m
+            labels:
+              severity: critical
+            annotations:
+              summary: "PostgreSQL is down"
+              description: "PostgreSQL database has been down for more than 2 minutes"
+
+          # High connection count
+          - alert: PostgreSQLTooManyConnections
+            expr: |
+              sum(pg_stat_database_numbackends) 
+              / 
+              pg_settings_max_connections > 0.8
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "PostgreSQL has too many connections"
+              description: "Connection usage is above 80%"
+
+          # Slow queries
+          - alert: PostgreSQLSlowQueries
+            expr: |
+              rate(pg_stat_statements_mean_exec_time[5m]) > 1000
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "PostgreSQL slow queries detected"
+              description: "Average query execution time is above 1 second"
+
+      - name: redis
+        interval: 30s
+        rules:
+          # Redis down
+          - alert: RedisDown
+            expr: up{job="redis"} == 0
+            for: 2m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Redis is down"
+              description: "Redis cache has been down for more than 2 minutes"
+
+          # High memory usage
+          - alert: RedisHighMemory
+            expr: |
+              redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Redis memory usage is high"
+              description: "Redis memory usage is above 90%"

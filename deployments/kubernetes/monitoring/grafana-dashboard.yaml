@@ -1,0 +1,106 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  skillflow-dashboard.json: |
+    {
+      "dashboard": {
+        "title": "SkillFlow Overview",
+        "tags": ["skillflow", "api"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Request Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(rate(http_requests_total{job=\"skillflow-api\"}[5m])) by (status)",
+                "legendFormat": "{{status}}"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Response Time (95th percentile)",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"skillflow-api\"}[5m])) by (le, endpoint))",
+                "legendFormat": "{{endpoint}}"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Error Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(rate(http_requests_total{job=\"skillflow-api\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{job=\"skillflow-api\"}[5m]))",
+                "legendFormat": "Error Rate"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Active Users",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "skillflow_active_users_total",
+                "legendFormat": "Active Users"
+              }
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Database Connections",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "skillflow_database_connections",
+                "legendFormat": "Connections"
+              }
+            ]
+          },
+          {
+            "id": 6,
+            "title": "Redis Cache Hit Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(rate(skillflow_cache_hits_total[5m])) / (sum(rate(skillflow_cache_hits_total[5m])) + sum(rate(skillflow_cache_misses_total[5m])))",
+                "legendFormat": "Hit Rate"
+              }
+            ]
+          },
+          {
+            "id": 7,
+            "title": "Pod CPU Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"skillflow\",pod=~\"skillflow-api.*\"}[5m])) by (pod)",
+                "legendFormat": "{{pod}}"
+              }
+            ]
+          },
+          {
+            "id": 8,
+            "title": "Pod Memory Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(container_memory_usage_bytes{namespace=\"skillflow\",pod=~\"skillflow-api.*\"}) by (pod)",
+                "legendFormat": "{{pod}}"
+              }
+            ]
+          }
+        ]
+      }
+    }

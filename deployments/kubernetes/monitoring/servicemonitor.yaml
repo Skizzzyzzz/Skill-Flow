@@ -1,0 +1,75 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: skillflow-api-metrics
+  namespace: skillflow
+  labels:
+    app: skillflow-api
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: metrics
+  selector:
+    app: skillflow-api
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: skillflow-api
+  namespace: monitoring
+  labels:
+    app: skillflow-api
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: skillflow-api
+  namespaceSelector:
+    matchNames:
+      - skillflow
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: postgres
+  namespace: monitoring
+  labels:
+    app: postgres
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: postgres
+  namespaceSelector:
+    matchNames:
+      - skillflow
+  endpoints:
+  - port: postgres
+    interval: 30s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: redis
+  namespace: monitoring
+  labels:
+    app: redis
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: redis
+  namespaceSelector:
+    matchNames:
+      - skillflow
+  endpoints:
+  - port: redis
+    interval: 30s

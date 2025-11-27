@@ -1,0 +1,52 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: skillflow-environments
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - env: dev
+            replicaCount: "1"
+            domain: dev.skillflow.local
+          - env: staging
+            replicaCount: "2"
+            domain: staging.skillflow.local
+          - env: prod
+            replicaCount: "3"
+            domain: skillflow.local
+  
+  template:
+    metadata:
+      name: 'skillflow-{{env}}'
+      namespace: argocd
+      labels:
+        environment: '{{env}}'
+    
+    spec:
+      project: skillflow
+      
+      source:
+        repoURL: https://github.com/vern/skillflow.git
+        targetRevision: '{{env}}'
+        path: deployments/kubernetes
+        helm:
+          parameters:
+            - name: replicaCount
+              value: '{{replicaCount}}'
+            - name: domain
+              value: '{{domain}}'
+            - name: environment
+              value: '{{env}}'
+      
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: 'skillflow-{{env}}'
+      
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

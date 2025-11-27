@@ -1,0 +1,46 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: skillflow
+  namespace: argocd
+spec:
+  description: SkillFlow Project
+  
+  sourceRepos:
+    - https://github.com/vern/skillflow.git
+    - https://charts.bitnami.com/bitnami
+    - https://prometheus-community.github.io/helm-charts
+    - https://grafana.github.io/helm-charts
+  
+  destinations:
+    - namespace: skillflow
+      server: https://kubernetes.default.svc
+    - namespace: monitoring
+      server: https://kubernetes.default.svc
+    - namespace: keycloak
+      server: https://kubernetes.default.svc
+  
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  
+  roles:
+    - name: admin
+      description: Admin role for SkillFlow project
+      policies:
+        - p, proj:skillflow:admin, applications, *, skillflow/*, allow
+        - p, proj:skillflow:admin, applications, sync, skillflow/*, allow
+      groups:
+        - argocd-admins
+    
+    - name: developer
+      description: Developer role for SkillFlow project
+      policies:
+        - p, proj:skillflow:developer, applications, get, skillflow/*, allow
+        - p, proj:skillflow:developer, applications, sync, skillflow/*, allow
+      groups:
+        - developers
