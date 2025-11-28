@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/spf13/viper"
@@ -110,10 +111,17 @@ type CORSConfig struct {
 }
 
 func Load() (*Config, error) {
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath("./configs")
-	viper.AddConfigPath(".")
+	// Check for CONFIG_PATH environment variable
+	configPath := os.Getenv("CONFIG_PATH")
+	if configPath != "" {
+		viper.SetConfigFile(configPath)
+	} else {
+		viper.SetConfigName("config")
+		viper.SetConfigType("yaml")
+		viper.AddConfigPath("./configs")
+		viper.AddConfigPath(".")
+	}
+	
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {

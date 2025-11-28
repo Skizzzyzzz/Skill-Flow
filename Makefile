@@ -54,10 +54,18 @@ dev-down:
 
 # Database migrations
 migrate-up:
-	$(GO) run cmd/migrate/main.go up
+	@if [ ! -f configs/config.local.yaml ]; then \
+		echo "Creating local config from config.yaml..."; \
+		cp configs/config.yaml configs/config.local.yaml; \
+		sed -i '' 's/host: postgres/host: localhost/g' configs/config.local.yaml; \
+		sed -i '' 's/host: redis/host: localhost/g' configs/config.local.yaml; \
+		sed -i '' 's/endpoint: minio:9000/endpoint: localhost:9000/g' configs/config.local.yaml; \
+		sed -i '' 's|http://elasticsearch:9200|http://localhost:9200|g' configs/config.local.yaml; \
+	fi
+	CONFIG_PATH=configs/config.local.yaml $(GO) run cmd/migrate/main.go up
 
 migrate-down:
-	$(GO) run cmd/migrate/main.go down
+	CONFIG_PATH=configs/config.local.yaml $(GO) run cmd/migrate/main.go down
 
 vendor:
 	$(GO) mod tidy
